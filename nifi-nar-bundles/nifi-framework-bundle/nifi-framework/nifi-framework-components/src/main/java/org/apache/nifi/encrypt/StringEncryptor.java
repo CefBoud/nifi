@@ -116,7 +116,7 @@ public class StringEncryptor {
     public static final String NF_SENSITIVE_PROPS_KEY = "nifi.sensitive.props.key";
     public static final String NF_SENSITIVE_PROPS_ALGORITHM = "nifi.sensitive.props.algorithm";
     public static final String NF_SENSITIVE_PROPS_PROVIDER = "nifi.sensitive.props.provider";
-    private static final String DEFAULT_SENSITIVE_PROPS_KEY = "nififtw!";
+    //private static final String DEFAULT_SENSITIVE_PROPS_KEY = "nififtw!";
 
     /**
      * This constructor creates an encryptor using <em>Password-Based Encryption</em> (PBE). The <em>key</em> value is the direct value provided in <code>nifi.sensitive.props.key</code> in
@@ -132,9 +132,7 @@ public class StringEncryptor {
         this.algorithm = algorithm;
         this.provider = provider;
         this.key = null;
-        this.password = new PBEKeySpec(key == null
-                ? DEFAULT_SENSITIVE_PROPS_KEY.toCharArray()
-                : key.toCharArray());
+        this.password = new PBEKeySpec(key.toCharArray());
         initialize();
     }
 
@@ -203,15 +201,14 @@ public class StringEncryptor {
         String sensitivePropValueNifiPropVar = niFiProperties.getProperty(NF_SENSITIVE_PROPS_KEY);
         // TODO: This method should be removed in 2.0.0 and replaced globally with the String, String, String method
         if (StringUtils.isBlank(sensitivePropValueNifiPropVar)) {
-            printBlankKeyWarning();
-            sensitivePropValueNifiPropVar = DEFAULT_SENSITIVE_PROPS_KEY;
+            throw new EncryptionException(NF_SENSITIVE_PROPS_KEY + " must be set");
         }
 
         return createEncryptor(sensitivePropAlgorithmVal, sensitivePropProviderVal, sensitivePropValueNifiPropVar);
     }
 
     /**
-     * Creates an instance of the NiFi sensitive property encryptor. If the password is blank, the default will be used and an error will be printed to the log.
+     * Creates an instance of the NiFi sensitive property encryptor.
      *
      * @param algorithm the encryption (and key derivation) algorithm ({@link EncryptionMethod#getAlgorithm()})
      * @param provider  the JCA Security provider ({@link EncryptionMethod#getProvider()})
@@ -227,29 +224,11 @@ public class StringEncryptor {
             throw new EncryptionException(NF_SENSITIVE_PROPS_PROVIDER + " must be set");
         }
 
-        // Can't throw an exception because users who have not populated a key expect fallback to default.
-        // TODO: This should be removed in 2.0.0 and replaced with strict enforcement of a explicit unique key
         if (StringUtils.isBlank(password)) {
-            printBlankKeyWarning();
-            password = DEFAULT_SENSITIVE_PROPS_KEY;
+            throw new EncryptionException(NF_SENSITIVE_PROPS_KEY + " must be set");
         }
 
         return new StringEncryptor(algorithm, provider, password);
-    }
-
-    private static void printBlankKeyWarning() {
-        logger.error(StringUtils.repeat("*", 80));
-        logger.error(centerString("A blank sensitive properties key was provided"));
-        logger.error(centerString("Specify a unique key in nifi.properties"));
-        logger.error(centerString("for nifi.sensitive.props.key"));
-        logger.error(centerString(""));
-        logger.error(centerString("The Encrypt Config Tool in NiFi Toolkit can be used to"));
-        logger.error(centerString("migrate the flow to the new key"));
-        logger.error(StringUtils.repeat("*", 80));
-    }
-
-    private static String centerString(String msg) {
-        return "*" + StringUtils.center(msg, 78, " ") + "*";
     }
 
     protected void initialize() {

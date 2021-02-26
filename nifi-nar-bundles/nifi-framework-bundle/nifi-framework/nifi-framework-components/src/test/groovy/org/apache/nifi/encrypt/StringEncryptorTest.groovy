@@ -77,10 +77,8 @@ class StringEncryptorTest {
     private static final String DEFAULT_ALGORITHM = "PBEWITHMD5AND128BITAES-CBC-OPENSSL"
     private static final String DEFAULT_PROVIDER = "BC"
     private static final String DEFAULT_PASSWORD = "nififtw!"
-    private static final String OTHER_PASSWORD = "thisIsABadPassword"
     private static
     final Map RAW_PROPERTIES = [(ALGORITHM): DEFAULT_ALGORITHM, (PROVIDER): DEFAULT_PROVIDER, (KEY): DEFAULT_PASSWORD]
-    private static final NiFiProperties STANDARD_PROPERTIES = new StandardNiFiProperties(new Properties(RAW_PROPERTIES))
 
     private static final int SALT_LENGTH = 8
     private static final int IV_LENGTH = 16
@@ -486,43 +484,40 @@ class StringEncryptorTest {
     }
 
     /**
-     * Checks the {@link StringEncryptor#createEncryptor(NiFiProperties)} method which injects a default {@code nifi.sensitive.props.key} if one is not provided.
+     * Checks that the {@link StringEncryptor#createEncryptor(NiFiProperties)} method requires the {@code nifi.sensitive.props.key} to be provided.
      *
      * @throws Exception
      */
     @Test
-    void testNiFiPropertiesCreateEncryptorShouldPopulateDefaultKeyIfMissing() throws Exception {
+    void testNiFiPropertiesCreateEncryptorShouldRequireKetToBeSet() throws Exception {
         // Arrange
         NiFiProperties propertiesWithoutKey = new StandardNiFiProperties([(ALGORITHM): DEFAULT_ALGORITHM, (PROVIDER): DEFAULT_PROVIDER] as Properties)
 
-        final StringEncryptor DEFAULT_ENCRYPTOR = new StringEncryptor(DEFAULT_ALGORITHM, DEFAULT_PROVIDER, DEFAULT_PASSWORD)
-        logger.info("Created encryptor from constructor using default values: ${DEFAULT_ENCRYPTOR}")
-
         // Act
-        StringEncryptor propertiesEncryptor = StringEncryptor.createEncryptor(propertiesWithoutKey)
-        logger.info("Created encryptor from NiFiProperties: ${propertiesEncryptor}")
+        def msg = shouldFail(EncryptionException) {
+            StringEncryptor propertiesEncryptor = StringEncryptor.createEncryptor(propertiesWithoutKey)
+            logger.info("Created encryptor from NiFiProperties: ${propertiesEncryptor}")
+        }
 
         // Assert
-        assert propertiesEncryptor == DEFAULT_ENCRYPTOR
+        assert msg =~ KEY + " must be set"
     }
 
     /**
-     * Checks the {@link StringEncryptor#createEncryptor(String, String, String)} method which injects a default {@code nifi.sensitive.props.key} if one is not provided.
+     * Checks that the {@link StringEncryptor#createEncryptor(String, String, String)} method requires {@code nifi.sensitive.props.key} to be provided.
      *
      * @throws Exception
      */
     @Test
-    void testCreateEncryptorShouldPopulateDefaultKeyIfMissing() throws Exception {
-        // Arrange
-        final StringEncryptor DEFAULT_ENCRYPTOR = new StringEncryptor(DEFAULT_ALGORITHM, DEFAULT_PROVIDER, DEFAULT_PASSWORD)
-        logger.info("Created encryptor from constructor using default values: ${DEFAULT_ENCRYPTOR}")
-
+    void testCreateEncryptorShouldRequireKeyToBeSet() throws Exception {
         // Act
-        StringEncryptor propertiesEncryptor = StringEncryptor.createEncryptor(DEFAULT_ALGORITHM, DEFAULT_PROVIDER, "")
-        logger.info("Created encryptor from NiFiProperties: ${propertiesEncryptor}")
+        def msg = shouldFail(EncryptionException) {
+            StringEncryptor propertiesEncryptor = StringEncryptor.createEncryptor(DEFAULT_ALGORITHM, DEFAULT_PROVIDER, "")
+            logger.info("Created encryptor with an empty key: ${propertiesEncryptor}")
+        }
 
         // Assert
-        assert propertiesEncryptor == DEFAULT_ENCRYPTOR
+        assert msg =~ KEY + " must be set"
     }
 
     @Test
